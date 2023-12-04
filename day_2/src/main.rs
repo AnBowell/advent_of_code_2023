@@ -1,4 +1,3 @@
-use core::num;
 use std::{
     collections::HashMap,
     fs::File,
@@ -87,16 +86,13 @@ fn problem_one() {
 
         let mut current_number = 0;
         'outer: for game in games {
-            println!("game: {}", game);
             for number_or_colour in game.split_whitespace() {
                 if number_or_colour.len() <= 2 {
                     current_number = number_or_colour.parse::<i64>().unwrap();
                 } else {
-                    println!("{}", number_or_colour.trim_end_matches(","));
                     if &current_number
                         > mapping.get(number_or_colour.trim_end_matches(",")).unwrap()
                     {
-                        println!("Game: {} is impossible", game_no);
                         result -= game_no;
                         break 'outer;
                     }
