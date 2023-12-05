@@ -1,3 +1,4 @@
+/// Pleased with this solution! Clean, concise, and fast!
 use std::{
     collections::{HashMap, HashSet},
     fs::File,
@@ -15,7 +16,7 @@ fn problem_two() {
     let file = File::open(FILE_LOC).unwrap();
     let lines = io::BufReader::new(file).lines();
 
-    let mut copy_tracker = HashMap::new();
+    let mut copy_tracker = HashMap::with_capacity(200);
 
     for line in lines {
         let line_str: &String = line.as_ref().unwrap();
