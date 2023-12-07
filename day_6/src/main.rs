@@ -37,7 +37,7 @@ fn problem_two() {
 
     let halfway_rem = time % 2;
 
-    let total = (1..(time / 2))
+    let total = (1..(time / 2) + halfway_rem)
         .map(|t| t * (time - t))
         .filter(|y| y > &distance)
         .count()
