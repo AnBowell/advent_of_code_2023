@@ -8,7 +8,7 @@ use std::{
 const FILE_LOC: &'static str = "data/input.txt";
 
 fn main() {
-    // problem_one();
+    problem_one();
     problem_two();
 }
 
@@ -22,37 +22,58 @@ fn problem_two() {
 
     let hashmap = load_in_nodes_to_hashmap(&mut lines);
 
-    let mut current_nodes = hashmap
+    let current_nodes = hashmap
         .keys()
         .filter(|x| x.chars().last().unwrap() == 'A')
         .collect::<Vec<&String>>();
 
-    let mut amount_of_steps = 0;
+    let mut total_steps = Vec::new();
 
-    for left_or_right in instructions.chars().cycle() {
-        let mut end_in_things_but_z_count = 0;
-        for current_node in current_nodes.iter_mut() {
-            // println!("Current node: {}", current_node);
-            if left_or_right == 'L' {
-                *current_node = &hashmap.get(current_node.as_str()).unwrap().0
-            } else if left_or_right == 'R' {
-                *current_node = &hashmap.get(current_node.as_str()).unwrap().1
-            } else {
-                panic!("Ahhhh how")
-            }
+    for mut current_node in current_nodes.into_iter() {
+        {
+            let mut amount_of_steps = 0;
 
-            if current_node.chars().last().unwrap() != 'Z' {
-                end_in_things_but_z_count += 1;
+            for left_or_right in instructions.chars().cycle() {
+                // println!("Current node: {}", current_node);
+                if left_or_right == 'L' {
+                    current_node = &hashmap.get(current_node).unwrap().0
+                } else if left_or_right == 'R' {
+                    current_node = &hashmap.get(current_node).unwrap().1
+                } else {
+                    panic!("Ahhhh how")
+                }
+
+                amount_of_steps += 1;
+
+                if current_node.chars().last().unwrap() == 'Z' {
+                    total_steps.push(amount_of_steps);
+                    // println!("Total steps: {:?}", total_steps);
+                    break;
+                }
             }
-        }
-        // println!("Current nodes: {:?}", current_nodes);
-        amount_of_steps += 1;
-        if end_in_things_but_z_count == 0 {
-            break;
         }
     }
 
-    println!("Problem two amount of steps: {}", amount_of_steps)
+    total_steps.sort();
+
+    println!("Total amount of steps: {:?}", total_steps);
+
+    let mut current_lcm = (total_steps[0] * total_steps[1]) / gcd(total_steps[0], total_steps[1]);
+
+    for counter in 1..total_steps.len() {
+        current_lcm = (total_steps[counter] * current_lcm) / gcd(total_steps[counter], current_lcm);
+    }
+    println!("Current lcm: {}", current_lcm);
+}
+
+fn gcd(mut a: u64, mut b: u64) -> u64 {
+    let mut r;
+    while a % b > 0 {
+        r = a % b;
+        a = b;
+        b = r;
+    }
+    return b;
 }
 
 fn problem_one() {
@@ -64,7 +85,7 @@ fn problem_one() {
     lines.next();
 
     let hashmap = load_in_nodes_to_hashmap(&mut lines);
-    println!("Hashmap: {:?}", hashmap);
+
     let mut current_node = "AAA";
     let mut amount_of_steps = 0;
 
