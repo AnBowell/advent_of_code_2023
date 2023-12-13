@@ -6,6 +6,137 @@ use std::{
 const FILE_LOC: &'static str = "data/input.txt";
 fn main() {
     problem_one();
+    problem_two();
+}
+
+fn problem_two() {
+    let file = File::open(FILE_LOC).unwrap();
+    let lines = io::BufReader::new(file).lines();
+
+    let (row_valleys, column_valleys) = parse_valley(lines);
+
+    let mut total = 0;
+    for (row_valley, column_valley) in row_valleys.iter().zip(column_valleys) {
+        let original_loc = scan_valley(&row_valley, &column_valley);
+        let (mirror_loc, _where) = scan_valley_2(&row_valley, &column_valley, &original_loc);
+
+        match mirror_loc {
+            RowColumn::Row(x, _) => total += 100 * (x + 1),
+            RowColumn::Column(x, _) => total += x + 1,
+        }
+    }
+    println!("Problem two total: {}", total);
+}
+
+fn scan_valley_2(
+    row_vec: &Vec<Vec<char>>,
+    column_vec: &Vec<Vec<char>>,
+    original_loc: &RowColumn,
+) -> (RowColumn, Where) {
+    let mut possible_symmetries = Vec::new();
+
+    for i in 0..row_vec.len() - 1 {
+        let row_one = &row_vec[i];
+        let row_two = &row_vec[i + 1];
+
+        if row_one.iter().zip(row_two).filter(|(x, y)| x == y).count() == row_one.len() - 1 {
+            let this_possible = RowColumn::Row(i, i + 1);
+            if &this_possible != original_loc {
+                possible_symmetries.push((this_possible, Where::Inside))
+            }
+        }
+        if row_one == row_two {
+            let this_possible = RowColumn::Row(i, i + 1);
+            if &this_possible != original_loc {
+                possible_symmetries.push((this_possible, Where::Outside))
+            }
+        }
+    }
+    for i in 0..column_vec.len() - 1 {
+        let column_one = &column_vec[i];
+        let column_two = &column_vec[i + 1];
+
+        if column_one
+            .iter()
+            .zip(column_two)
+            .filter(|(x, y)| x == y)
+            .count()
+            == column_one.len() - 1
+        {
+            let this_possible = RowColumn::Column(i, i + 1);
+            if &this_possible != original_loc {
+                possible_symmetries.push((this_possible, Where::Inside))
+            }
+        }
+
+        if column_one == column_two {
+            let this_possible = RowColumn::Column(i, i + 1);
+            if &this_possible != original_loc {
+                possible_symmetries.push((this_possible, Where::Outside))
+            }
+        }
+    }
+
+    if possible_symmetries.len() == 1 {
+        return possible_symmetries.first().unwrap().clone();
+    }
+
+    let mut symmetry_counter = vec![0; possible_symmetries.len()];
+    for (counter, (symmetry, whereabouts)) in possible_symmetries.iter().enumerate() {
+        let vec_to_use = match symmetry {
+            RowColumn::Row(_, _) => &row_vec,
+            RowColumn::Column(_, _) => &column_vec,
+        };
+        let indicies = symmetry.get_indicies();
+
+        let left_and_right = indicies.0.min(vec_to_use.len() - 1 - indicies.1);
+
+        if left_and_right == 0 {
+            symmetry_counter[counter] = 1;
+            continue;
+        }
+
+        let mut current_amount_diff = 0;
+        for add_counter in 1..=left_and_right {
+            if matches!(whereabouts, Where::Inside) {
+                if vec_to_use[indicies.0 - add_counter] == vec_to_use[indicies.1 + add_counter] {
+                    symmetry_counter[counter] += 1;
+                } else {
+                    symmetry_counter[counter] = 0;
+                    break;
+                }
+            } else {
+                current_amount_diff += vec_to_use[indicies.0 - add_counter].len()
+                    - vec_to_use[indicies.0 - add_counter]
+                        .iter()
+                        .zip(&vec_to_use[indicies.1 + add_counter])
+                        .filter(|(x, y)| x == y)
+                        .count();
+
+                if current_amount_diff <= 1 {
+                    symmetry_counter[counter] += 1;
+                } else {
+                    symmetry_counter[counter] = 0;
+                    break;
+                }
+            }
+        }
+    }
+
+    let max = symmetry_counter
+        .iter()
+        .enumerate()
+        .max_by(|(_, a), (_, b)| a.cmp(b))
+        .map(|(index, _)| index)
+        .unwrap();
+
+    return possible_symmetries[max].clone();
+}
+
+#[derive(Debug, Clone)]
+enum Where {
+    Inside,
+    Outside,
 }
 
 fn problem_one() {
@@ -25,7 +156,6 @@ fn problem_one() {
     }
     println!("Problem one total: {}", total);
 }
-
 fn scan_valley(row_vec: &Vec<Vec<char>>, column_vec: &Vec<Vec<char>>) -> RowColumn {
     let mut possible_symmetries = Vec::new();
 
@@ -79,7 +209,7 @@ fn scan_valley(row_vec: &Vec<Vec<char>>, column_vec: &Vec<Vec<char>>) -> RowColu
     return possible_symmetries[max].clone();
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 enum RowColumn {
     Row(usize, usize),
     Column(usize, usize),
