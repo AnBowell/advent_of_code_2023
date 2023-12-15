@@ -1,19 +1,15 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fs::File,
     io::{self, BufRead, BufReader, Lines},
-    iter::Enumerate,
-    slice::Iter,
 };
 
 const FILE_LOC: &'static str = "data/input.txt";
 fn main() {
-    // problem_one();
+    problem_one();
     problem_two();
 }
 
-// 102727 too low. 102696#
-// 102979 too high.
 fn problem_two() {
     let file = File::open(FILE_LOC).unwrap();
     let lines = io::BufReader::new(file).lines();
@@ -28,11 +24,12 @@ fn problem_two() {
         Direction::South,
         Direction::East,
     ];
-    // .cycle();
-    // environment_vec = transpose(environment_vec);
 
     let mut seen_so_far = HashMap::new();
     let cycle = directions.iter().cycle();
+
+    let mut continue_running = None;
+    let mut continue_running_counter = 0;
 
     for (dir_no, direction) in cycle.enumerate() {
         for (which_column, column) in environment_vec.iter_mut().enumerate() {
@@ -64,9 +61,22 @@ fn problem_two() {
         // Change the orientation each time.
         environment_vec = transpose(environment_vec);
 
-        if dir_no == (4 * 1_000_000) - 1 {
-            break;
-            // 1_000_000_000
+        // Messy here. Didn't want to keep track of a history, so just step forward some amount...
+        if continue_running.is_some() {
+            if continue_running.unwrap() == continue_running_counter {
+                let mut total_load_this_cycle = 0;
+                for column in &environment_vec {
+                    total_load_this_cycle += column
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, x)| matches!(x, Environment::RoundedRock))
+                        .map(|(count, _)| column.len() - count)
+                        .sum::<usize>();
+                }
+                println!("Problem two answer: {}", total_load_this_cycle);
+                break;
+            }
+            continue_running_counter += 1;
         }
 
         if (dir_no + 1) % 4 == 0 {
@@ -82,23 +92,19 @@ fn problem_two() {
 
             let seen_before = seen_so_far.insert(total_load_this_cycle, (dir_no + 1) / 4);
 
-            if seen_before.is_some() {
-                println!(
-                    "Total load cycle start, cycle no: {},{}",
-                    total_load_this_cycle,
-                    seen_before.unwrap(),
-                );
+            // Messy here. Didn't want to keep track of a history, so just step forward some amount...
+            if seen_before.is_some() && continue_running.is_none() {
+                let cycle_len = ((dir_no + 1) / 4) - seen_before.unwrap();
 
-                // println!("Cycle no: {}", (dir_no + 1));
-                break;
+                let x = (1_000_000_000 - seen_before.unwrap()) / cycle_len;
+
+                let y = seen_before.unwrap() + x * cycle_len;
+
+                let diff = 1_000_000_000 - y;
+
+                continue_running = Some((diff * 4) - 1);
             }
-
-            println!("Problem two total cycle load: {}", total_load_this_cycle);
         }
-
-        // for line in transpose(environment_vec) {
-        //     println!("{:?}", line);
-        // }
     }
 }
 
