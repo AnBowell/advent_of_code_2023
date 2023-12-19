@@ -1,35 +1,40 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fs::File,
     io::{self, BufRead, BufReader, Lines},
-    path::Iter,
 };
 
-const FILE_LOC: &'static str = "data/test.txt";
+const FILE_LOC: &'static str = "data/input.txt";
 
 fn main() {
     problem_one();
 }
 
+//370281 too low.
 fn problem_one() {
     let file = File::open(FILE_LOC).unwrap();
     let lines = io::BufReader::new(file).lines();
 
     let (rules, parts) = parse_problem(lines);
 
+    let mut problem_one_total = 0;
+    let start_rule = rules.get("in").unwrap();
+
     for part in parts {
-        let current_rule = rules.get("in").unwrap();
-
+        println!("Part: {:?}", part);
         let mut accepted_or_not = String::new();
-        current_rule.check_part(&part, &rules, &mut accepted_or_not);
 
-        println!("Accepted or not: {}", accepted_or_not);
+        start_rule.check_part(&part, &rules, &mut accepted_or_not);
+
+        if accepted_or_not == "A" {
+            problem_one_total += part.sum();
+        }
     }
 
-    // println!("{:?}", rules);
+    println!("Problem one total: {}", problem_one_total);
 }
 
-fn parse_problem(lines: Lines<BufReader<File>>) -> (HashMap<String, Rule>, Vec<Part>) {
+fn parse_problem(lines: Lines<BufReader<File>>) -> (HashMap<String, Rules>, Vec<Part>) {
     // let rule_hashmap: HashMap<String, > = HashMap::new();
 
     let mut parts_processing = false;
@@ -49,7 +54,7 @@ fn parse_problem(lines: Lines<BufReader<File>>) -> (HashMap<String, Rule>, Vec<P
         if parts_processing {
             parts.push(Part::from_string(&content));
         } else {
-            let (name, rule) = Rule::from_string(&content);
+            let (name, rule) = Rules::from_string(&content);
             rules.insert(name, rule);
         }
     }
@@ -58,48 +63,38 @@ fn parse_problem(lines: Lines<BufReader<File>>) -> (HashMap<String, Rule>, Vec<P
 }
 
 #[derive(Debug)]
-struct Rule {
-    x: Option<(i64, char, i64, String)>,
-    m: Option<(i64, char, i64, String)>,
-    a: Option<(i64, char, i64, String)>,
-    s: Option<(i64, char, i64, String)>,
+struct Rules {
+    rules: Vec<Option<(i64, char, i64, String)>>,
     default: String,
 }
 
-impl Default for Rule {
+impl Default for Rules {
     fn default() -> Self {
         Self {
-            x: None,
-            m: None,
-            a: None,
-            s: None,
+            rules: Vec::new(),
             default: String::new(),
         }
     }
 }
 
-impl Rule {
-    fn check_part(
-        &self,
-        part: &Part,
-        rule_map: &HashMap<String, Rule>,
-        to_go_to: &mut String,
-    ) -> String {
-        if to_go_to == "A" || to_go_to == "R" {
-            return to_go_to.clone();
-        }
-
-        let mut rules = self.as_vec();
+impl Rules {
+    fn check_part(&self, part: &Part, rule_map: &HashMap<String, Rules>, to_go_to: &mut String) {
+        let mut rules = self.rules.clone();
         rules.sort_by_key(|x| x.clone().map(|x| x.0));
         rules.reverse();
 
         for rule in rules {
             if rule.is_none() {
-                *to_go_to = rule_map
+                if &self.default == "A" || &self.default == "R" {
+                    *to_go_to = self.default.clone();
+                    return;
+                }
+
+                rule_map
                     .get(&self.default)
                     .unwrap()
                     .check_part(part, rule_map, to_go_to);
-                continue;
+                return;
             }
 
             let part_value = match rule.as_ref().unwrap().1 {
@@ -109,26 +104,30 @@ impl Rule {
                 's' => part.s,
                 _ => panic!("Ahhh. Not in Xmas."),
             };
-            println!("{:?}", &rule.as_ref().unwrap().3);
-            if part_value - rule.as_ref().unwrap().2 < 0 {
-                *to_go_to = rule_map
+
+            let condition = if rule.as_ref().unwrap().2 < 0 {
+                part_value > rule.as_ref().unwrap().2.abs()
+            } else {
+                part_value < rule.as_ref().unwrap().2
+            };
+
+            if condition {
+                if &rule.as_ref().unwrap().3 == "A" || &rule.as_ref().unwrap().3 == "R" {
+                    *to_go_to = rule.as_ref().unwrap().3.clone();
+                    return;
+                }
+
+                rule_map
                     .get(&rule.as_ref().unwrap().3)
                     .unwrap()
                     .check_part(part, rule_map, to_go_to);
+                return;
             }
         }
 
-        return to_go_to.to_string();
+        return;
     }
 
-    fn as_vec(&self) -> Vec<Option<(i64, char, i64, String)>> {
-        vec![
-            self.x.clone(),
-            self.m.clone(),
-            self.a.clone(),
-            self.s.clone(),
-        ]
-    }
     fn from_string(rule_string: &str) -> (String, Self) {
         let mut split_string = rule_string.split("{");
 
@@ -137,7 +136,9 @@ impl Rule {
         let rules = split_string.next().unwrap().replace("}", "");
         let rules = rules.split(",");
 
-        let mut rule_struct = Rule::default();
+        let len = rules.clone().count();
+
+        let mut rule_struct = Rules::default();
 
         for (rule_no, rule) in rules.enumerate() {
             if !rule.contains(":") {
@@ -166,14 +167,14 @@ impl Rule {
 
             let value = value.parse::<i64>().unwrap();
 
-            match property {
-                'x' => rule_struct.x = Some((rule_no as i64, property, value * operator, result)),
-                'm' => rule_struct.m = Some((rule_no as i64, property, value * operator, result)),
-                'a' => rule_struct.a = Some((rule_no as i64, property, value * operator, result)),
-                's' => rule_struct.s = Some((rule_no as i64, property, value * operator, result)),
-                _ => panic!("Ahhh. Not in Xmas."),
-            }
+            rule_struct.rules.push(Some((
+                (len - rule_no) as i64,
+                property,
+                value * operator,
+                result,
+            )));
         }
+        rule_struct.rules.push(None);
 
         return (name, rule_struct);
     }
@@ -188,8 +189,8 @@ struct Part {
 }
 
 impl Part {
-    fn as_vec(&self) -> Vec<i64> {
-        vec![self.x, self.m, self.a, self.s]
+    fn sum(&self) -> i64 {
+        self.x + self.m + self.a + self.s
     }
     fn from_string(part_string: &str) -> Self {
         let mut x_m_a_s_vals = part_string.split(",").map(|x| {
