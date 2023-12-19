@@ -15,6 +15,7 @@ fn problem_two() {
 
     let mut coords = vec![(0_i64, 0_i64)];
 
+    
     // Get outer line total. Can't make a vec lazily this time. Will get diff between vertices.
     let mut outer_line_total = 0;
 
