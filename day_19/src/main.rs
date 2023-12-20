@@ -4,13 +4,33 @@ use std::{
     io::{self, BufRead, BufReader, Lines},
 };
 
-const FILE_LOC: &'static str = "data/input.txt";
+const FILE_LOC: &'static str = "data/test.txt";
 
 fn main() {
     problem_one();
+    problem_two();
 }
 
-//370281 too low.
+struct Tree {
+    nodes: Vec<Tree>,
+}
+
+fn problem_two() {
+    let file = File::open(FILE_LOC).unwrap();
+    let lines = io::BufReader::new(file).lines();
+
+    let (rules, _) = parse_problem(lines);
+
+    let mut problem_one_total = 0;
+    let mut start = 1e15 as u64;
+
+    let start_rule = rules.get("in").unwrap();
+
+    start_rule.process_parts(&rules, &mut start);
+
+    println!("Problem two total: {}", problem_one_total);
+}
+
 fn problem_one() {
     let file = File::open(FILE_LOC).unwrap();
     let lines = io::BufReader::new(file).lines();
@@ -21,7 +41,6 @@ fn problem_one() {
     let start_rule = rules.get("in").unwrap();
 
     for part in parts {
-        println!("Part: {:?}", part);
         let mut accepted_or_not = String::new();
 
         start_rule.check_part(&part, &rules, &mut accepted_or_not);
@@ -35,8 +54,6 @@ fn problem_one() {
 }
 
 fn parse_problem(lines: Lines<BufReader<File>>) -> (HashMap<String, Rules>, Vec<Part>) {
-    // let rule_hashmap: HashMap<String, > = HashMap::new();
-
     let mut parts_processing = false;
 
     let mut parts = Vec::with_capacity(200);
@@ -78,6 +95,51 @@ impl Default for Rules {
 }
 
 impl Rules {
+    fn process_parts(&self, rule_map: &HashMap<String, Rules>, current_count: &mut u64) {
+        let mut rules = self.rules.clone();
+        rules.sort_by_key(|x| x.clone().map(|x| x.0));
+        rules.reverse();
+
+        for rule in rules {
+            if rule.is_none() {
+                if &self.default == "A" || &self.default == "R" {
+                    // *to_go_to = self.default.clone();
+                    println!("End of the line!: {:?}", &self.default);
+                    return;
+                }
+                println!("&self.default: {:?}", &self.default);
+                rule_map
+                    .get(&self.default)
+                    .unwrap()
+                    .process_parts(rule_map, current_count);
+
+                return;
+            }
+
+            // let condition = if rule.as_ref().unwrap().2 < 0 {
+            //     part_value > rule.as_ref().unwrap().2.abs()
+            // } else {
+            //     part_value < rule.as_ref().unwrap().2
+            // };
+
+            let condition = true;
+            if condition {
+                if &rule.as_ref().unwrap().3 == "A" || &rule.as_ref().unwrap().3 == "R" {
+                    // *to_go_to = rule.as_ref().unwrap().3.clone();
+                    println!("End of the line!: {:?}", &rule.as_ref().unwrap().3);
+                    continue;
+                }
+                println!("ril: {:?}", &rule.as_ref().unwrap().3);
+                rule_map
+                    .get(&rule.as_ref().unwrap().3)
+                    .unwrap()
+                    .process_parts(rule_map, current_count);
+            }
+        }
+
+        return;
+    }
+
     fn check_part(&self, part: &Part, rule_map: &HashMap<String, Rules>, to_go_to: &mut String) {
         let mut rules = self.rules.clone();
         rules.sort_by_key(|x| x.clone().map(|x| x.0));
