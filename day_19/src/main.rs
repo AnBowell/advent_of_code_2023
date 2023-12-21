@@ -26,7 +26,9 @@ fn problem_two() {
 
     let start_rule = rules.get("in").unwrap();
 
-    start_rule.process_parts(&rules, &mut start);
+    let mut tracker = HashMap::new();
+
+    start_rule.process_parts(&rules, &mut start, &mut tracker);
 
     println!("Problem two total: {}", problem_one_total);
 }
@@ -53,32 +55,6 @@ fn problem_one() {
     println!("Problem one total: {}", problem_one_total);
 }
 
-fn parse_problem(lines: Lines<BufReader<File>>) -> (HashMap<String, Rules>, Vec<Part>) {
-    let mut parts_processing = false;
-
-    let mut parts = Vec::with_capacity(200);
-    let mut rules = HashMap::new();
-
-    for line in lines {
-        let content = line.as_ref().unwrap();
-
-        // Blank line in file between switch to parts.
-        if content.is_empty() {
-            parts_processing = true;
-            continue;
-        }
-
-        if parts_processing {
-            parts.push(Part::from_string(&content));
-        } else {
-            let (name, rule) = Rules::from_string(&content);
-            rules.insert(name, rule);
-        }
-    }
-
-    return (rules, parts);
-}
-
 #[derive(Debug)]
 struct Rules {
     rules: Vec<Option<(i64, char, i64, String)>>,
@@ -95,7 +71,12 @@ impl Default for Rules {
 }
 
 impl Rules {
-    fn process_parts(&self, rule_map: &HashMap<String, Rules>, current_count: &mut u64) {
+    fn process_parts(
+        &self,
+        rule_map: &HashMap<String, Rules>,
+        current_count: &mut u64,
+        tracker: &mut HashMap<String, (Part, Part)>,
+    ) {
         let mut rules = self.rules.clone();
         rules.sort_by_key(|x| x.clone().map(|x| x.0));
         rules.reverse();
@@ -107,20 +88,17 @@ impl Rules {
                     println!("End of the line!: {:?}", &self.default);
                     return;
                 }
-                println!("&self.default: {:?}", &self.default);
-                rule_map
-                    .get(&self.default)
-                    .unwrap()
-                    .process_parts(rule_map, current_count);
+                println!("Rule: {}", self.default);
 
+                rule_map.get(&self.default).unwrap().process_parts(
+                    rule_map,
+                    current_count,
+                    tracker,
+                );
+
+                println!("Stepping back up");
                 return;
             }
-
-            // let condition = if rule.as_ref().unwrap().2 < 0 {
-            //     part_value > rule.as_ref().unwrap().2.abs()
-            // } else {
-            //     part_value < rule.as_ref().unwrap().2
-            // };
 
             let condition = true;
             if condition {
@@ -129,11 +107,24 @@ impl Rules {
                     println!("End of the line!: {:?}", &rule.as_ref().unwrap().3);
                     continue;
                 }
-                println!("ril: {:?}", &rule.as_ref().unwrap().3);
+                println!("Rule: {}", &rule.as_ref().unwrap().3);
+
+                let entry = tracker
+                    .entry(self.default.clone())
+                    .or_insert((Part::min(), Part::max()));
+
+                match &rule.as_ref().unwrap().1 {
+                    'x' => if &rule.as_ref().unwrap().2 < 0{&rule.as_ref().unwrap().1},
+                    'm' => ,
+                    'a' => ,
+                    's' => ,
+                    _ => panic!("Invalid char")
+                }
+
                 rule_map
                     .get(&rule.as_ref().unwrap().3)
                     .unwrap()
-                    .process_parts(rule_map, current_count);
+                    .process_parts(rule_map, current_count, tracker);
             }
         }
 
@@ -251,6 +242,22 @@ struct Part {
 }
 
 impl Part {
+    fn max() -> Self {
+        Self {
+            x: 4000,
+            m: 4000,
+            a: 4000,
+            s: 4000,
+        }
+    }
+    fn min() -> Self {
+        Self {
+            x: 0,
+            m: 0,
+            a: 0,
+            s: 0,
+        }
+    }
     fn sum(&self) -> i64 {
         self.x + self.m + self.a + self.s
     }
@@ -272,4 +279,30 @@ impl Part {
             s: x_m_a_s_vals.next().unwrap(),
         }
     }
+}
+
+fn parse_problem(lines: Lines<BufReader<File>>) -> (HashMap<String, Rules>, Vec<Part>) {
+    let mut parts_processing = false;
+
+    let mut parts = Vec::with_capacity(200);
+    let mut rules = HashMap::new();
+
+    for line in lines {
+        let content = line.as_ref().unwrap();
+
+        // Blank line in file between switch to parts.
+        if content.is_empty() {
+            parts_processing = true;
+            continue;
+        }
+
+        if parts_processing {
+            parts.push(Part::from_string(&content));
+        } else {
+            let (name, rule) = Rules::from_string(&content);
+            rules.insert(name, rule);
+        }
+    }
+
+    return (rules, parts);
 }
