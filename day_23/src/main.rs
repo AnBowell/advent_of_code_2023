@@ -23,39 +23,59 @@ fn problem_one() {
     let (env, start_pos, finish_pos) = parse_problem(&mut reader);
 
 
-    // let mut positions = vec![start_pos];
-    // let mut current_directions = vec![Direction::Down];
+    let mut positions = vec![start_pos];
+    let mut directions = vec![Direction::Down];
+    let mut current_steps = vec![0];
 
-    let mut position = start_pos.clone();
-    let mut direction = Direction::Down;
-    let mut number_of_steps = 0;
-
-    
-    while position != finish_pos{
-    // for (counter, (position, direction)) in positions.iter().zip(&current_directions).enumerate(){
-        let (new_positions, new_directions) = find_possible_directions(&env, position,
-            &direction);
+    // let mut position = start_pos.clone();
+    // let mut direction = Direction::Down;
+    // let mut number_of_steps = 0;
 
 
-        println!("Positions, directions: {:?}, {:?}", new_positions, new_directions);
-        position = *new_positions.last().unwrap();
-        direction = new_directions.last().unwrap().to_owned();
-        number_of_steps +=1;
-            // for (new_counter,    (new_pos, new_dir)) in new_positions.iter().zip(&new_directions).enumerate(){
-            //     if new_counter < positions.len(){
-            //         positions[new_counter] = *new_pos;
-            //         current_directions[new_counter] = new_dir.to_owned()
-            //     } else{
-            //         positions.push(new_pos);
-            //         current_directions.push(new_dir)
-            //     }
-            // }
-        
+    while positions.iter().filter(|x| **x != finish_pos).count() > 0{
+
+        let mut all_new_positions = Vec::new();
+        let mut all_new_direcitons = Vec::new();
+        let mut all_new_current_steps = Vec::new();
+
+        println!("Positions: {:?}", positions);
+        // let mut all new_steps = Vec::new
+        for ((position, direction), step) in positions.iter().zip(&directions).zip(&current_steps){
+
+            if *position == finish_pos{
+                continue
+            }
+            println!("Position, direction: {:?}, {:?}", position, direction);
+            let (mut new_positions, mut new_directions) = find_possible_directions(&env,*position,
+                direction);
+
+            if !new_positions.is_empty(){
+                all_new_current_steps.append(&mut vec![step+1; new_directions.len()]);
+            } else{
+                all_new_current_steps.append(&mut vec![*step; new_directions.len()])
+            }
+
+            all_new_positions.append(&mut new_positions);
+            all_new_direcitons.append(&mut new_directions);
+     
+
+        }
+
+        positions = all_new_positions;
+        directions = all_new_direcitons;
+        current_steps = all_new_current_steps;
+
+
+        println!("Positions, directions: {:?}, {:?}", positions, directions);
+        // *positions.get_mut(0).unwrap() = *new_positions.last().unwrap();
+        // *directions.get_mut(0).unwrap() = new_directions.last().unwrap().to_owned();
+        // *current_steps.get_mut(0).unwrap() +=1;
+
         
       
     }
 
-    println!("Number of steps taken: {}", number_of_steps);
+    println!("Number of steps taken: {:?}", current_steps);
 
     // println!("Start pos: {:?}", env);
 
